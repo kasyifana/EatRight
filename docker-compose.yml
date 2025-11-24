@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  eatright-backend:
+    container_name: eatright-backend
+    build: .
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    restart: unless-stopped
+    networks:
+      - eatright-net
+
+networks:
+  eatright-net:
+    driver: bridge

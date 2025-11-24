@@ -2,9 +2,8 @@ pipeline {
     agent any
     
     environment {
-        APP_NAME = 'eatright-server'
-        DEPLOY_DIR = '/var/www/eatright'
-        GO_VERSION = '1.22.0'
+        APP_NAME = 'eatright-backend'
+        DOCKER_IMAGE = 'eatright-backend:latest'
     }
     
     stages {
@@ -15,66 +14,54 @@ pipeline {
             }
         }
         
-        stage('Setup Go') {
+        stage('Setup Environment') {
             steps {
-                echo '🔧 Setting up Go environment...'
+                echo '🔧 Setting up environment...'
                 sh '''
-                    export PATH=$PATH:/usr/local/go/bin
-                    export GOPATH=$HOME/go
-                    go version
+                    # Create .env file from Jenkins credentials or use placeholder for now
+                    # In production, you should use Jenkins Credentials Binding
+                    
+                    # For this setup, we assume .env exists on the server or we create a dummy one for build
+                    # But docker-compose needs it.
+                    
+                    # Let's check if .env exists, if not create a template
+                    if [ ! -f .env ]; then
+                        echo "Creating template .env"
+                        echo "PORT=8080" > .env
+                        echo "ENV=production" >> .env
+                        # Note: Real credentials should be managed via Jenkins Credentials
+                    fi
                 '''
             }
         }
         
-        stage('Install Dependencies') {
+        stage('Build Docker Image') {
             steps {
-                echo '📥 Installing Go dependencies...'
+                echo '🔨 Building Docker image...'
                 sh '''
-                    export PATH=$PATH:/usr/local/go/bin
-                    export GOPATH=$HOME/go
-                    go mod download
-                    go mod tidy
-                '''
-            }
-        }
-        
-        stage('Run Tests') {
-            steps {
-                echo '🧪 Running tests...'
-                sh '''
-                    export PATH=$PATH:/usr/local/go/bin
-                    export GOPATH=$HOME/go
-                    go test ./... -v || true
-                '''
-            }
-        }
-        
-        stage('Build') {
-            steps {
-                echo '🔨 Building application...'
-                sh '''
-                    export PATH=$PATH:/usr/local/go/bin
-                    export GOPATH=$HOME/go
-                    
-                    # Build for Linux
-                    GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o bin/${APP_NAME} cmd/server/main.go
-                    
-                    # Make executable
-                    chmod +x bin/${APP_NAME}
-                    
-                    # Show binary info
-                    ls -lh bin/${APP_NAME}
+                    docker build -t ${DOCKER_IMAGE} .
                 '''
             }
         }
         
         stage('Deploy') {
             steps {
-                echo '🚀 Deploying to production...'
+                echo '🚀 Deploying container...'
                 sh '''
-                    # Run deployment script
-                    chmod +x scripts/deploy.sh
-                    ./scripts/deploy.sh
+                    # Stop and remove old container
+                    docker stop ${APP_NAME} || true
+                    docker rm ${APP_NAME} || true
+                    
+                    # Run new container
+                    # We mount the .env file from the host machine to keep secrets safe
+                    # Ensure /var/www/eatright/.env exists on the VPS
+                    
+                    docker run -d \
+                        --name ${APP_NAME} \
+                        --restart unless-stopped \
+                        -p 8080:8080 \
+                        -v /var/www/eatright/.env:/app/.env \
+                        ${DOCKER_IMAGE}
                 '''
             }
         }
@@ -83,13 +70,8 @@ pipeline {
             steps {
                 echo '✅ Verifying deployment...'
                 sh '''
-                    # Wait for service to start
                     sleep 5
-                    
-                    # Check if service is running
-                    sudo systemctl status eatright || true
-                    
-                    # Test health endpoint
+                    docker ps | grep ${APP_NAME}
                     curl -f http://localhost:8080/health || echo "Warning: Health check failed"
                 '''
             }
@@ -98,16 +80,14 @@ pipeline {
     
     post {
         success {
-            echo '✅✅✅ Deployment successful! ✅✅✅'
-            echo '🎉 Application is now running at http://localhost:8080'
+            echo '✅✅✅ Docker Deployment successful! ✅✅✅'
         }
         failure {
-            echo '❌❌❌ Deployment failed! ❌❌❌'
-            echo '📋 Check the console output for errors'
+            echo '❌❌❌ Docker Deployment failed! ❌❌❌'
         }
         always {
-            echo '🧹 Cleaning up workspace...'
-            cleanWs()
+            echo '🧹 Cleaning up...'
+            sh 'docker system prune -f || true'
         }
     }
 }

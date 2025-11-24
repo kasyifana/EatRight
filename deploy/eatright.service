@@ -1,0 +1,26 @@
+[Unit]
+Description=EatRight Backend Service
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/eatright
+EnvironmentFile=/var/www/eatright/.env
+ExecStart=/var/www/eatright/bin/eatright-server
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=eatright
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/www/eatright
+
+[Install]
+WantedBy=multi-user.target

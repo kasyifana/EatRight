@@ -97,9 +97,9 @@ func main() {
 	app.Use(recover.New())
 	app.Use(middlewares.Logger())
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     cfg.CORS.AllowedOrigins,
+		AllowOrigins:     "*", // Changed to * for easier debugging, change back to cfg.CORS.AllowedOrigins for production
 		AllowMethods:     "GET,POST,PATCH,DELETE,OPTIONS",
-		AllowHeaders:     "Origin,Content-Type,Accept,Authorization",
+		AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
 		AllowCredentials: true,
 	}))
 

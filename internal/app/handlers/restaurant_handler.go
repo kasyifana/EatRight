@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"strconv"
 
 	"eatright-backend/internal/app/middlewares"
@@ -47,6 +48,13 @@ type CreateRestaurantRequest struct {
 // @Failure 500 {object} utils.Response "Internal server error"
 // @Router /restaurants [post]
 func (h *RestaurantHandler) CreateRestaurant(c *fiber.Ctx) error {
+	// DEBUG: Check headers and context
+	authHeader := c.Get("Authorization")
+	fmt.Println("DEBUG - Header Auth:", authHeader)
+
+	userContext := c.Locals("user")
+	fmt.Println("DEBUG - User Context:", userContext)
+
 	// Get user ID from context
 	userID, err := middlewares.GetUserID(c)
 	if err != nil {

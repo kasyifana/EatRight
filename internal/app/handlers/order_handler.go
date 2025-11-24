@@ -29,7 +29,17 @@ type CreateOrderRequest struct {
 }
 
 // CreateOrder creates a new order
-// POST /api/orders
+// @Summary Create order
+// @Description Creates a new food order and automatically decrements stock
+// @Tags Orders
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body CreateOrderRequest true "Order Details"
+// @Success 201 {object} utils.Response{data=models.Order} "Order created successfully"
+// @Failure 400 {object} utils.Response "Invalid request or insufficient stock"
+// @Failure 401 {object} utils.Response "Unauthorized"
+// @Router /orders [post]
 func (h *OrderHandler) CreateOrder(c *fiber.Ctx) error {
 	// Get user ID from context
 	userID, err := middlewares.GetUserID(c)
@@ -71,7 +81,16 @@ func (h *OrderHandler) CreateOrder(c *fiber.Ctx) error {
 }
 
 // GetMyOrders retrieves all orders for the authenticated user
-// GET /api/orders/me
+// @Summary Get user's order history
+// @Description Retrieves all orders placed by the authenticated user
+// @Tags Orders
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} utils.Response{data=[]models.Order} "Orders retrieved successfully"
+// @Failure 401 {object} utils.Response "Unauthorized"
+// @Failure 500 {object} utils.Response "Internal server error"
+// @Router /orders/me [get]
 func (h *OrderHandler) GetMyOrders(c *fiber.Ctx) error {
 	// Get user ID from context
 	userID, err := middlewares.GetUserID(c)
@@ -93,7 +112,18 @@ type UpdateOrderStatusRequest struct {
 }
 
 // UpdateOrderStatus updates the status of an order
-// PATCH /api/orders/:id/status
+// @Summary Update order status
+// @Description Updates order status - pending/ready/completed/cancelled (restaurant owner only)
+// @Tags Orders
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Order ID (UUID)"
+// @Param request body UpdateOrderStatusRequest true "Status Update"
+// @Success 200 {object} utils.Response "Order status updated successfully"
+// @Failure 400 {object} utils.Response "Invalid request"
+// @Failure 403 {object} utils.Response "Forbidden - not restaurant owner"
+// @Router /orders/{id}/status [patch]
 func (h *OrderHandler) UpdateOrderStatus(c *fiber.Ctx) error {
 	// Get user ID from context (must be restaurant owner)
 	userID, err := middlewares.GetUserID(c)

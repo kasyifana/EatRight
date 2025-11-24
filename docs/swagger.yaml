@@ -1,4 +1,225 @@
 basePath: /api
+definitions:
+  handlers.CreateListingRequest:
+    properties:
+      description:
+        type: string
+      name:
+        description: Optional for mystery box
+        type: string
+      photo_url:
+        type: string
+      pickup_time:
+        description: 'Format: "HH:MM:SS"'
+        type: string
+      price:
+        type: integer
+      stock:
+        type: integer
+      type:
+        description: '"mystery_box" or "reveal"'
+        type: string
+    type: object
+  handlers.CreateOrderRequest:
+    properties:
+      listing_id:
+        type: string
+      qty:
+        type: integer
+    type: object
+  handlers.CreateRestaurantRequest:
+    properties:
+      address:
+        type: string
+      closing_time:
+        description: 'Format: "HH:MM:SS"'
+        type: string
+      lat:
+        type: number
+      lng:
+        type: number
+      name:
+        type: string
+    type: object
+  handlers.UpdateOrderStatusRequest:
+    properties:
+      status:
+        description: '"pending", "ready", "completed", "cancelled"'
+        type: string
+    type: object
+  handlers.UpdateStatusRequest:
+    properties:
+      is_active:
+        type: boolean
+    type: object
+  handlers.UpdateStockRequest:
+    properties:
+      quantity:
+        description: Can be positive (add) or negative (reduce)
+        type: integer
+    type: object
+  handlers.VerifyTokenRequest:
+    properties:
+      supabase_token:
+        type: string
+    type: object
+  handlers.VerifyTokenResponse:
+    properties:
+      token:
+        type: string
+      user: {}
+    type: object
+  models.Listing:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      is_active:
+        type: boolean
+      name:
+        description: Nullable for mystery box
+        type: string
+      orders:
+        items:
+          $ref: '#/definitions/models.Order'
+        type: array
+      photo_url:
+        type: string
+      pickup_time:
+        $ref: '#/definitions/models.TimeOnly'
+      price:
+        description: Price in smallest currency unit (e.g., cents)
+        type: integer
+      restaurant:
+        allOf:
+        - $ref: '#/definitions/models.Restaurant'
+        description: Relationships
+      restaurant_id:
+        type: string
+      stock:
+        type: integer
+      type:
+        $ref: '#/definitions/models.ListingType'
+    type: object
+  models.ListingType:
+    enum:
+    - mystery_box
+    - reveal
+    type: string
+    x-enum-varnames:
+    - ListingTypeMysteryBox
+    - ListingTypeReveal
+  models.Order:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      listing:
+        $ref: '#/definitions/models.Listing'
+      listing_id:
+        type: string
+      qty:
+        type: integer
+      status:
+        $ref: '#/definitions/models.OrderStatus'
+      total_price:
+        description: Total price in smallest currency unit
+        type: integer
+      user:
+        allOf:
+        - $ref: '#/definitions/models.User'
+        description: Relationships
+      user_id:
+        type: string
+    type: object
+  models.OrderStatus:
+    enum:
+    - pending
+    - ready
+    - completed
+    - cancelled
+    type: string
+    x-enum-varnames:
+    - OrderStatusPending
+    - OrderStatusReady
+    - OrderStatusCompleted
+    - OrderStatusCancelled
+  models.Restaurant:
+    properties:
+      address:
+        type: string
+      closing_time:
+        $ref: '#/definitions/models.TimeOnly'
+      created_at:
+        type: string
+      id:
+        type: string
+      lat:
+        type: number
+      listings:
+        items:
+          $ref: '#/definitions/models.Listing'
+        type: array
+      lng:
+        type: number
+      name:
+        type: string
+      owner:
+        allOf:
+        - $ref: '#/definitions/models.User'
+        description: Relationships
+      owner_id:
+        type: string
+    type: object
+  models.TimeOnly:
+    properties:
+      time.Time:
+        type: string
+    type: object
+  models.User:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      orders:
+        items:
+          $ref: '#/definitions/models.Order'
+        type: array
+      restaurants:
+        description: Relationships
+        items:
+          $ref: '#/definitions/models.Restaurant'
+        type: array
+      role:
+        $ref: '#/definitions/models.UserRole'
+    type: object
+  models.UserRole:
+    enum:
+    - user
+    - restaurant
+    type: string
+    x-enum-varnames:
+    - RoleUser
+    - RoleRestaurant
+  utils.Response:
+    properties:
+      data: {}
+      error:
+        type: string
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
 host: localhost:8080
 info:
   contact:
@@ -11,7 +232,474 @@ info:
   termsOfService: http://swagger.io/terms/
   title: EatRight API
   version: "1.0"
-paths: {}
+paths:
+  /auth/verify:
+    post:
+      consumes:
+      - application/json
+      description: Verifies a Supabase Google OAuth token and returns a backend JWT
+        for API authentication
+      parameters:
+      - description: Supabase Token
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.VerifyTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Authentication successful
+          schema:
+            allOf:
+            - $ref: '#/definitions/utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/handlers.VerifyTokenResponse'
+              type: object
+        "400":
+          description: Invalid request body
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Token verification failed
+          schema:
+            $ref: '#/definitions/utils.Response'
+      summary: Verify Supabase token
+      tags:
+      - Authentication
+  /listings:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves all active food listings from all restaurants
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Listings retrieved successfully
+          schema:
+            allOf:
+            - $ref: '#/definitions/utils.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.Listing'
+                  type: array
+              type: object
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/utils.Response'
+      summary: List all food offerings
+      tags:
+      - Listings
+  /listings/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves detailed information about a specific food listing
+      parameters:
+      - description: Listing ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Listing retrieved successfully
+          schema:
+            allOf:
+            - $ref: '#/definitions/utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Listing'
+              type: object
+        "400":
+          description: Invalid listing ID
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "404":
+          description: Listing not found
+          schema:
+            $ref: '#/definitions/utils.Response'
+      summary: Get listing details
+      tags:
+      - Listings
+  /listings/{id}/status:
+    patch:
+      consumes:
+      - application/json
+      description: Activates or deactivates a listing (restaurant owner only)
+      parameters:
+      - description: Listing ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Status Update
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.UpdateStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Status updated successfully
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: Toggle listing status
+      tags:
+      - Listings
+  /listings/{id}/stock:
+    patch:
+      consumes:
+      - application/json
+      description: Updates the stock quantity of a listing (restaurant owner only)
+      parameters:
+      - description: Listing ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Stock Update
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.UpdateStockRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Stock updated successfully
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: Update listing stock
+      tags:
+      - Listings
+  /orders:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new food order and automatically decrements stock
+      parameters:
+      - description: Order Details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CreateOrderRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Order created successfully
+          schema:
+            allOf:
+            - $ref: '#/definitions/utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Order'
+              type: object
+        "400":
+          description: Invalid request or insufficient stock
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: Create order
+      tags:
+      - Orders
+  /orders/{id}/status:
+    patch:
+      consumes:
+      - application/json
+      description: Updates order status - pending/ready/completed/cancelled (restaurant
+        owner only)
+      parameters:
+      - description: Order ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Status Update
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.UpdateOrderStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Order status updated successfully
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden - not restaurant owner
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: Update order status
+      tags:
+      - Orders
+  /orders/me:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves all orders placed by the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Orders retrieved successfully
+          schema:
+            allOf:
+            - $ref: '#/definitions/utils.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.Order'
+                  type: array
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: Get user's order history
+      tags:
+      - Orders
+  /restaurants:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves all restaurants or nearby restaurants if lat/lng provided
+      parameters:
+      - description: Latitude for nearby search
+        in: query
+        name: lat
+        type: number
+      - description: Longitude for nearby search
+        in: query
+        name: lng
+        type: number
+      - description: 'Max distance in km (default: 10)'
+        in: query
+        name: distance
+        type: number
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Restaurants retrieved successfully
+          schema:
+            allOf:
+            - $ref: '#/definitions/utils.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.Restaurant'
+                  type: array
+              type: object
+        "400":
+          description: Invalid parameters
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/utils.Response'
+      summary: List restaurants
+      tags:
+      - Restaurants
+    post:
+      consumes:
+      - application/json
+      description: Creates a new restaurant (requires restaurant role)
+      parameters:
+      - description: Restaurant Details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CreateRestaurantRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Restaurant created successfully
+          schema:
+            allOf:
+            - $ref: '#/definitions/utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Restaurant'
+              type: object
+        "400":
+          description: Invalid request body
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden - restaurant role required
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: Create restaurant
+      tags:
+      - Restaurants
+  /restaurants/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves detailed information about a specific restaurant
+      parameters:
+      - description: Restaurant ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Restaurant retrieved successfully
+          schema:
+            allOf:
+            - $ref: '#/definitions/utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Restaurant'
+              type: object
+        "400":
+          description: Invalid restaurant ID
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "404":
+          description: Restaurant not found
+          schema:
+            $ref: '#/definitions/utils.Response'
+      summary: Get restaurant by ID
+      tags:
+      - Restaurants
+  /restaurants/{id}/listings:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new food listing for a restaurant (mystery box or reveal
+        item)
+      parameters:
+      - description: Restaurant ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Listing Details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CreateListingRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Listing created successfully
+          schema:
+            allOf:
+            - $ref: '#/definitions/utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Listing'
+              type: object
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: Create food listing
+      tags:
+      - Listings
+  /users/me:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves the profile of the currently authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User retrieved successfully
+          schema:
+            allOf:
+            - $ref: '#/definitions/utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.User'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: Get current user profile
+      tags:
+      - Users
 securityDefinitions:
   BearerAuth:
     description: Type "Bearer" followed by a space and JWT token.

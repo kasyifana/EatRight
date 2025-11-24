@@ -34,7 +34,18 @@ type CreateRestaurantRequest struct {
 }
 
 // CreateRestaurant creates a new restaurant
-// POST /api/restaurants
+// @Summary Create restaurant
+// @Description Creates a new restaurant (requires restaurant role)
+// @Tags Restaurants
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body CreateRestaurantRequest true "Restaurant Details"
+// @Success 201 {object} utils.Response{data=models.Restaurant} "Restaurant created successfully"
+// @Failure 400 {object} utils.Response "Invalid request body"
+// @Failure 403 {object} utils.Response "Forbidden - restaurant role required"
+// @Failure 500 {object} utils.Response "Internal server error"
+// @Router /restaurants [post]
 func (h *RestaurantHandler) CreateRestaurant(c *fiber.Ctx) error {
 	// Get user ID from context
 	userID, err := middlewares.GetUserID(c)
@@ -75,7 +86,18 @@ func (h *RestaurantHandler) CreateRestaurant(c *fiber.Ctx) error {
 }
 
 // GetRestaurants retrieves restaurants, optionally filtered by proximity
-// GET /api/restaurants?lat=&lng=&distance=
+// @Summary List restaurants
+// @Description Retrieves all restaurants or nearby restaurants if lat/lng provided
+// @Tags Restaurants
+// @Accept json
+// @Produce json
+// @Param lat query number false "Latitude for nearby search"
+// @Param lng query number false "Longitude for nearby search"
+// @Param distance query number false "Max distance in km (default: 10)"
+// @Success 200 {object} utils.Response{data=[]models.Restaurant} "Restaurants retrieved successfully"
+// @Failure 400 {object} utils.Response "Invalid parameters"
+// @Failure 500 {object} utils.Response "Internal server error"
+// @Router /restaurants [get]
 func (h *RestaurantHandler) GetRestaurants(c *fiber.Ctx) error {
 	latStr := c.Query("lat")
 	lngStr := c.Query("lng")
@@ -116,7 +138,16 @@ func (h *RestaurantHandler) GetRestaurants(c *fiber.Ctx) error {
 }
 
 // GetRestaurantByID retrieves a restaurant by ID
-// GET /api/restaurants/:id
+// @Summary Get restaurant by ID
+// @Description Retrieves detailed information about a specific restaurant
+// @Tags Restaurants
+// @Accept json
+// @Produce json
+// @Param id path string true "Restaurant ID (UUID)"
+// @Success 200 {object} utils.Response{data=models.Restaurant} "Restaurant retrieved successfully"
+// @Failure 400 {object} utils.Response "Invalid restaurant ID"
+// @Failure 404 {object} utils.Response "Restaurant not found"
+// @Router /restaurants/{id} [get]
 func (h *RestaurantHandler) GetRestaurantByID(c *fiber.Ctx) error {
 	idStr := c.Params("id")
 	id, err := uuid.Parse(idStr)

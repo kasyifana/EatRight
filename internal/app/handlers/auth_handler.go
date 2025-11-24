@@ -31,7 +31,16 @@ type VerifyTokenResponse struct {
 }
 
 // VerifyToken verifies a Supabase token and returns a backend JWT
-// POST /api/auth/verify
+// @Summary Verify Supabase token
+// @Description Verifies a Supabase Google OAuth token and returns a backend JWT for API authentication
+// @Tags Authentication
+// @Accept json
+// @Produce json
+// @Param request body VerifyTokenRequest true "Supabase Token"
+// @Success 200 {object} utils.Response{data=VerifyTokenResponse} "Authentication successful"
+// @Failure 400 {object} utils.Response "Invalid request body"
+// @Failure 401 {object} utils.Response "Token verification failed"
+// @Router /auth/verify [post]
 func (h *AuthHandler) VerifyToken(c *fiber.Ctx) error {
 	var req VerifyTokenRequest
 

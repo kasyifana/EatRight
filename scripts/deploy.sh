@@ -53,7 +53,7 @@ fi
 
 # Stop the service
 log_info "Stopping ${SERVICE_NAME} service..."
-sudo systemctl stop ${SERVICE_NAME} || log_warn "Service was not running"
+sudo /usr/bin/systemctl stop ${SERVICE_NAME} || log_warn "Service was not running"
 
 # Copy new binary
 log_info "Copying new binary to ${DEPLOY_DIR}/bin/..."
@@ -70,14 +70,14 @@ fi
 
 # Start the service
 log_info "Starting ${SERVICE_NAME} service..."
-sudo systemctl start ${SERVICE_NAME}
-sudo systemctl enable ${SERVICE_NAME}
+sudo /usr/bin/systemctl start ${SERVICE_NAME}
+sudo /usr/bin/systemctl enable ${SERVICE_NAME}
 
 # Wait a bit for service to start
 sleep 3
 
 # Check service status
-if sudo systemctl is-active --quiet ${SERVICE_NAME}; then
+if sudo /usr/bin/systemctl is-active --quiet ${SERVICE_NAME}; then
     log_info "✅ Service is running!"
 else
     log_error "❌ Service failed to start"
@@ -96,7 +96,7 @@ fi
 
 # Show service status
 log_info "Service status:"
-sudo systemctl status ${SERVICE_NAME} --no-pager -l
+sudo /usr/bin/systemctl status ${SERVICE_NAME} --no-pager -l
 
 # Deployment summary
 echo ""

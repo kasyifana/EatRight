@@ -78,9 +78,17 @@ java -version
 ### 2.2 Install Jenkins
 
 ```bash
+# Install dependencies
+sudo apt install -y gnupg2 ca-certificates
+
+# Add Jenkins GPG key (NEW WAY for Ubuntu 24.04)
+sudo wget -O /usr/share/keyrings/jenkins-keyring.asc \
+  https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key
+
 # Add Jenkins repository
-wget -q -O - https://pkg.jenkins.io/debian-stable/jenkins.io.key | sudo apt-key add -
-sudo sh -c 'echo deb https://pkg.jenkins.io/debian-stable binary/ > /etc/apt/sources.list.d/jenkins.list'
+echo "deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc]" \
+  https://pkg.jenkins.io/debian-stable binary/ | sudo tee \
+  /etc/apt/sources.list.d/jenkins.list > /dev/null
 
 # Install Jenkins
 sudo apt update

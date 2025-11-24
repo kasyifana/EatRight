@@ -60,22 +60,11 @@ log_info "Copying new binary to ${DEPLOY_DIR}/bin/..."
 cp bin/${APP_NAME} ${DEPLOY_DIR}/bin/${APP_NAME}
 chmod +x ${DEPLOY_DIR}/bin/${APP_NAME}
 
-# Copy other necessary files
-log_info "Copying configuration files..."
-if [ -f "deploy/${SERVICE_NAME}.service" ]; then
-    sudo cp deploy/${SERVICE_NAME}.service /etc/systemd/system/
-    sudo systemctl daemon-reload
-fi
-
-if [ -f "deploy/nginx.conf" ]; then
-    sudo cp deploy/nginx.conf /etc/nginx/sites-available/${SERVICE_NAME}
-    sudo ln -sf /etc/nginx/sites-available/${SERVICE_NAME} /etc/nginx/sites-enabled/
-fi
-
 # Verify .env file exists
 if [ ! -f "${DEPLOY_DIR}/.env" ]; then
     log_error ".env file not found at ${DEPLOY_DIR}/.env"
     log_error "Please create .env file before deployment!"
+    log_error "Run: sudo nano ${DEPLOY_DIR}/.env"
     exit 1
 fi
 
@@ -95,10 +84,6 @@ else
     log_error "Check logs with: sudo journalctl -u ${SERVICE_NAME} -n 50"
     exit 1
 fi
-
-# Reload Nginx
-log_info "Reloading Nginx..."
-sudo nginx -t && sudo systemctl reload nginx || log_warn "Nginx reload failed"
 
 # Health check
 log_info "Performing health check..."

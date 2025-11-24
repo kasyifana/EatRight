@@ -3,6 +3,7 @@ package middlewares
 import (
 	"eatright-backend/internal/app/config"
 	"eatright-backend/internal/app/utils"
+	"fmt"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -13,21 +14,28 @@ func AuthMiddleware(cfg *config.Config) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		// Get Authorization header
 		authHeader := c.Get("Authorization")
+		fmt.Println("DEBUG [Middleware] - Authorization Header:", authHeader)
+
 		if authHeader == "" {
+			fmt.Println("DEBUG [Middleware] - Missing Authorization Header")
 			return utils.ErrorResponse(c, fiber.StatusUnauthorized, "Authorization header required", nil)
 		}
 
 		// Extract token
 		tokenString, err := utils.ExtractToken(authHeader)
 		if err != nil {
+			fmt.Println("DEBUG [Middleware] - Extract Token Error:", err)
 			return utils.ErrorResponse(c, fiber.StatusUnauthorized, "Invalid authorization header", err)
 		}
 
 		// Validate token
 		claims, err := utils.ValidateToken(tokenString, cfg.JWT.Secret)
 		if err != nil {
+			fmt.Println("DEBUG [Middleware] - Validate Token Error:", err)
 			return utils.ErrorResponse(c, fiber.StatusUnauthorized, "Invalid or expired token", err)
 		}
+
+		fmt.Println("DEBUG [Middleware] - Token Valid. UserID:", claims.UserID, "Role:", claims.Role)
 
 		// Store claims in context
 		c.Locals("userID", claims.UserID)

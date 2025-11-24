@@ -34,20 +34,20 @@ log_error() {
 
 # Create necessary directories
 log_info "Creating deployment directories..."
-sudo mkdir -p ${DEPLOY_DIR}/bin
-sudo mkdir -p ${BACKUP_DIR}
-sudo mkdir -p ${DEPLOY_DIR}/logs
+mkdir -p ${DEPLOY_DIR}/bin
+mkdir -p ${BACKUP_DIR}
+mkdir -p ${DEPLOY_DIR}/logs
 
 # Backup current binary if exists
 if [ -f "${DEPLOY_DIR}/bin/${APP_NAME}" ]; then
     BACKUP_FILE="${BACKUP_DIR}/${APP_NAME}.$(date +%Y%m%d_%H%M%S).backup"
     log_info "Backing up current binary to ${BACKUP_FILE}..."
-    sudo cp ${DEPLOY_DIR}/bin/${APP_NAME} ${BACKUP_FILE}
+    cp ${DEPLOY_DIR}/bin/${APP_NAME} ${BACKUP_FILE}
     
     # Keep only last 5 backups
     log_info "Cleaning old backups..."
     cd ${BACKUP_DIR}
-    ls -t ${APP_NAME}.*.backup | tail -n +6 | xargs -r rm --
+    ls -t ${APP_NAME}.*.backup 2>/dev/null | tail -n +6 | xargs -r rm --
     cd -
 fi
 
@@ -57,8 +57,8 @@ sudo systemctl stop ${SERVICE_NAME} || log_warn "Service was not running"
 
 # Copy new binary
 log_info "Copying new binary to ${DEPLOY_DIR}/bin/..."
-sudo cp bin/${APP_NAME} ${DEPLOY_DIR}/bin/${APP_NAME}
-sudo chmod +x ${DEPLOY_DIR}/bin/${APP_NAME}
+cp bin/${APP_NAME} ${DEPLOY_DIR}/bin/${APP_NAME}
+chmod +x ${DEPLOY_DIR}/bin/${APP_NAME}
 
 # Copy other necessary files
 log_info "Copying configuration files..."
@@ -71,10 +71,6 @@ if [ -f "deploy/nginx.conf" ]; then
     sudo cp deploy/nginx.conf /etc/nginx/sites-available/${SERVICE_NAME}
     sudo ln -sf /etc/nginx/sites-available/${SERVICE_NAME} /etc/nginx/sites-enabled/
 fi
-
-# Set correct permissions
-log_info "Setting permissions..."
-sudo chown -R eatright:eatright ${DEPLOY_DIR}
 
 # Verify .env file exists
 if [ ! -f "${DEPLOY_DIR}/.env" ]; then

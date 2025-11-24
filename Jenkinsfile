@@ -59,7 +59,7 @@ pipeline {
                     docker run -d \
                         --name ${APP_NAME} \
                         --restart unless-stopped \
-                        -p 8080:8080 \
+                        -p 8081:8080 \
                         -v /var/www/eatright/.env:/app/.env \
                         ${DOCKER_IMAGE}
                 '''
@@ -72,7 +72,7 @@ pipeline {
                 sh '''
                     sleep 5
                     docker ps | grep ${APP_NAME}
-                    curl -f http://localhost:8080/health || echo "Warning: Health check failed"
+                    curl -f http://localhost:8081/health || echo "Warning: Health check failed"
                 '''
             }
         }
